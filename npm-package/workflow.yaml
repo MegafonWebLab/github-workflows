@@ -1,0 +1,120 @@
+name: npm package CI
+
+on:
+  workflow_call:
+    inputs:
+      base-repo-owner:
+        description: 'Account where release steps should be proceeded'
+        default: MegafonWebLab
+        required: false
+        type: string
+      release-branch:
+        description: 'Branch where release steps should be proceeded'
+        default: master
+        required: false
+        type: string
+      enable-typecheck:
+        description: 'Enable `yarn typecheck` run'
+        default: true
+        required: false
+        type: boolean
+      enable-lint:
+        description: 'Enable `yarn lint` run'
+        default: true
+        required: false
+        type: boolean
+      enable-test:
+        description: 'Enable `yarn test` run'
+        default: true
+        required: false
+        type: boolean
+      enable-build:
+        description: 'Enable `yarn build` run'
+        default: true
+        required: false
+        type: boolean
+    secrets:
+      npm-token:
+        description: 'Npm token for publishing'
+        required: false
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Linting commit messages
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          yarn global add @commitlint/cli
+          yarn global add @commitlint/config-conventional
+          yarn exec commitlint -- --from=origin/${{ github.base_ref }} --to=HEAD
+
+      - name: Typecheck
+        if: inputs.enable-typecheck
+        run: yarn typecheck
+
+      - name: Lint
+        if: inputs.enable-lint
+        run: yarn lint
+
+      - name: Tests
+        if: inputs.enable-test
+        run: yarn test
+
+      - name: Build
+        if: inputs.enable-build
+        run: yarn build
+
+      - name: Define branch purpose
+        id: branch
+        run: |
+          if
+          [ ${{ contains(github.event.head_commit.message, 'skip release') }} = false ] &&
+          [ ${{ github.repository_owner }} = ${{ inputs.base-repo-owner }} ] &&
+          [ "${{ secrets.npm-token }}" != "" ] &&
+          [ ${{ github.ref }} = refs/heads/${{ inputs.release-branch }} ];
+          then
+            echo ::set-output name=should_release::true
+          else
+            echo ::set-output name=should_release::false
+          fi
+
+      - name: Release
+        id: release
+        if: steps.branch.outputs.should_release == 'true'
+        uses: ridedott/release-me-action@master
+        with:
+          node-module: true
+          release-rules:
+            '[
+                { "release": "patch", "type": "fix" },
+                { "release": "patch", "type": "perf" },
+                { "release": "minor", "type": "feat" },
+                { "release": "major", "subject": "*BREAKING CHANGE:*" }
+            ]'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_AUTHOR_NAME: ${{ github.actor }}
+          GIT_AUTHOR_EMAIL: ''
+          GIT_COMMITTER_NAME: ${{ github.actor }}
+          GIT_COMMITTER_EMAIL: ''
+
+      - name: Publish to NPM
+        if: steps.release.outputs.released == 'true'
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm-token }}
