@@ -31,7 +31,7 @@ on:
 
 jobs:
   test-and-release:
-    uses: MegafonWebLab/github-workflows/npm-package/workflow.yaml@v1.0.0-npm-package
+    uses: MegafonWebLab/github-workflows/.github/workflows/npm-package.yaml@v1.0.1-npm-package
 ```
 
 ### Options
@@ -71,7 +71,7 @@ All changes from previous tag to current commit will be published.
 #### Example with publishing
 
 ```yaml
-    uses: MegafonWebLab/github-workflows/npm-package/workflow.yaml@v1.0.0-npm-package
+    uses: MegafonWebLab/github-workflows/.github/workflows/npm-package.yaml@v1.0.1-npm-package
     secrets:
       npm-token: ${{ secrets.NPM_TOKEN }}
 ```
@@ -79,7 +79,7 @@ All changes from previous tag to current commit will be published.
 #### Example from external repository
 
 ```yaml
-    uses: MegafonWebLab/github-workflows/npm-package/workflow.yaml@v1.0.0-npm-package
+    uses: MegafonWebLab/github-workflows/.github/workflows/npm-package.yaml@v1.0.1-npm-package
     with:
       base-repo-owner: my-account-name
 ```
