@@ -58,10 +58,7 @@ jobs:
 
       - name: Linting commit messages
         if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          yarn global add @commitlint/cli
-          yarn global add @commitlint/config-conventional
-          yarn exec commitlint -- --from=origin/${{ github.base_ref }} --to=HEAD
+        run: yarn exec commitlint -- --from=origin/${{ github.base_ref }} --to=HEAD
 
       - name: Typecheck
         if: inputs.enable-typecheck
